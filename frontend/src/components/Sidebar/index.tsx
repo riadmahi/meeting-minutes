@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronRight, File, Settings, ChevronLeftCircle, ChevronRightCircle, Calendar, StickyNote, Home, Trash2, Mic, Square, Plus, Search, Pencil, NotebookPen, SearchIcon, X, User, LogOut } from 'lucide-react';
+import { ChevronDown, ChevronRight, File, Settings, ChevronLeftCircle, ChevronRightCircle, Calendar, StickyNote, Home, Trash2, Mic, Square, Plus, Search, Pencil, NotebookPen, SearchIcon, X, User, LogOut, ListTodo } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSidebar } from './SidebarProvider';
 import type { CurrentMeeting } from '@/components/Sidebar/SidebarProvider';
@@ -448,6 +448,7 @@ const Sidebar: React.FC = () => {
     const isHomePage = pathname === '/';
     const isMeetingPage = pathname?.includes('/meeting-details');
     const isSettingsPage = pathname === '/settings';
+    const isTasksPage = pathname === '/tasks';
 
     return (
       <TooltipProvider>
@@ -503,6 +504,20 @@ const Sidebar: React.FC = () => {
             </TooltipTrigger>
             <TooltipContent side="right">
               <p>Meeting Notes</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={() => router.push('/tasks')}
+                className={`p-2 rounded-lg transition-colors duration-150 ${isTasksPage ? 'bg-gray-100' : 'hover:bg-gray-100'}`}
+              >
+                <ListTodo className="w-5 h-5 text-gray-600" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Mes tâches</p>
             </TooltipContent>
           </Tooltip>
 
@@ -774,6 +789,18 @@ const Sidebar: React.FC = () => {
         {!isCollapsed && (
 
           <div className="flex-shrink-0 p-2 border-t border-gray-100">
+            <button
+              onClick={() => router.push('/tasks')}
+              className={`w-full flex items-center px-3 py-1.5 mb-1 text-sm font-medium rounded-lg transition-colors ${
+                pathname === '/tasks'
+                  ? 'bg-gray-100 text-gray-900'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <ListTodo className="w-4 h-4 mr-2" />
+              <span>Mes tâches</span>
+            </button>
+
             <button
               onClick={() => router.push('/meetings/new')}
               className="w-full flex items-center justify-center px-3 py-2 mb-1 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors shadow-sm"
