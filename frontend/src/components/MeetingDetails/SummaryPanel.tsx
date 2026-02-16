@@ -130,11 +130,14 @@ export function SummaryPanel({
                 onSave={onSaveAll}
                 onCopy={onCopySummary}
                 onFind={() => {
-                  // TODO: Implement find in summary functionality
                   console.log('Find in summary clicked');
                 }}
                 onOpenFolder={onOpenFolder}
                 hasSummary={!!aiSummary}
+                meetingId={meeting.id}
+                meetingTitle={meetingTitle}
+                createdAt={meeting.created_at}
+                getMarkdown={summaryRef.current?.getMarkdown}
               />
             </div>
           </div>
