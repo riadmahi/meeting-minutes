@@ -9,10 +9,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Share2, FileDown, Link2, Mail, Loader2 } from 'lucide-react';
+import { Share2, FileDown, Link2, Mail, Loader2, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportSummaryToPdf } from '@/services/pdfExportService';
 import { getMeeting } from '@/services/firestoreService';
+import { DistributionDialog } from './DistributionDialog';
 
 interface ShareMenuProps {
   meetingId: string;
@@ -23,6 +24,8 @@ interface ShareMenuProps {
 
 export function ShareMenu({ meetingId, meetingTitle, createdAt, getMarkdown }: ShareMenuProps) {
   const [isExporting, setIsExporting] = useState(false);
+  const [showDistribution, setShowDistribution] = useState(false);
+  const [cachedMarkdown, setCachedMarkdown] = useState('');
 
   const handleExportPdf = async () => {
     setIsExporting(true);
@@ -33,7 +36,6 @@ export function ShareMenu({ meetingId, meetingTitle, createdAt, getMarkdown }: S
         return;
       }
 
-      // Fetch meeting to get participants
       const meeting = await getMeeting(meetingId).catch(() => null);
 
       await exportSummaryToPdf({
@@ -54,8 +56,6 @@ export function ShareMenu({ meetingId, meetingTitle, createdAt, getMarkdown }: S
   };
 
   const handleCopyLink = async () => {
-    // Build a shareable link — for now the Firestore meeting ID
-    // In production this would be a web app URL like https://app.remedee.com/cr/{id}
     const link = `https://app.remedee.com/cr/${meetingId}`;
     try {
       await navigator.clipboard.writeText(link);
@@ -65,47 +65,55 @@ export function ShareMenu({ meetingId, meetingTitle, createdAt, getMarkdown }: S
     }
   };
 
-  const handleEmailShare = async () => {
+  const handleOpenDistribution = async () => {
     try {
       const markdown = await getMarkdown();
-      const subject = encodeURIComponent(`Compte-rendu : ${meetingTitle}`);
-      const body = encodeURIComponent(
-        `Bonjour,\n\nVoici le compte-rendu de la réunion "${meetingTitle}".\n\n${markdown.substring(0, 2000)}${markdown.length > 2000 ? '\n\n[Contenu tronqué — voir le CR complet dans l\'app]' : ''}\n\n---\nGénéré par Remedee`,
-      );
-      window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+      setCachedMarkdown(markdown);
+      setShowDistribution(true);
     } catch (err) {
-      console.error('Email share failed:', err);
-      toast.error("Erreur lors du partage par email");
+      console.error('Failed to get markdown for distribution:', err);
+      toast.error('Erreur lors de la récupération du contenu');
     }
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" disabled={isExporting}>
-          {isExporting ? (
-            <Loader2 className="animate-spin" />
-          ) : (
-            <Share2 />
-          )}
-          <span className="hidden lg:inline">Partager</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuItem onClick={handleExportPdf}>
-          <FileDown className="w-4 h-4 mr-2" />
-          Exporter en PDF
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleCopyLink}>
-          <Link2 className="w-4 h-4 mr-2" />
-          Copier le lien
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleEmailShare}>
-          <Mail className="w-4 h-4 mr-2" />
-          Envoyer par email
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" disabled={isExporting}>
+            {isExporting ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <Share2 />
+            )}
+            <span className="hidden lg:inline">Partager</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuItem onClick={handleExportPdf}>
+            <FileDown className="w-4 h-4 mr-2" />
+            Exporter en PDF
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleCopyLink}>
+            <Link2 className="w-4 h-4 mr-2" />
+            Copier le lien
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleOpenDistribution}>
+            <Send className="w-4 h-4 mr-2" />
+            Distribuer...
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DistributionDialog
+        open={showDistribution}
+        onOpenChange={setShowDistribution}
+        meetingId={meetingId}
+        meetingTitle={meetingTitle}
+        createdAt={createdAt}
+        markdown={cachedMarkdown}
+      />
+    </>
   );
 }
