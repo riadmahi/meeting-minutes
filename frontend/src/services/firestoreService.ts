@@ -13,6 +13,7 @@ import {
   serverTimestamp,
   Timestamp,
   addDoc,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -170,6 +171,107 @@ export async function getSummary(meetingId: string): Promise<FirestoreSummary | 
   };
 }
 
+// ─── Tasks (subcollection of meetings) ───
+
+export interface FirestoreTask {
+  id: string;
+  meetingId: string;
+  description: string;
+  assignee?: string;
+  dueDate?: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  priority?: 'low' | 'medium' | 'high';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export async function addTask(
+  meetingId: string,
+  task: Omit<FirestoreTask, 'id' | 'meetingId' | 'createdAt' | 'updatedAt'>,
+): Promise<string> {
+  const ref = collection(db, 'meetings', meetingId, 'tasks');
+  const docRef = await addDoc(ref, {
+    ...task,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+  return docRef.id;
+}
+
+export async function addTasksBatch(
+  meetingId: string,
+  tasks: Omit<FirestoreTask, 'id' | 'meetingId' | 'createdAt' | 'updatedAt'>[],
+): Promise<void> {
+  const batch = writeBatch(db);
+  const ref = collection(db, 'meetings', meetingId, 'tasks');
+  for (const task of tasks) {
+    const docRef = doc(ref);
+    batch.set(docRef, {
+      ...task,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  }
+  await batch.commit();
+}
+
+export async function getMeetingTasks(meetingId: string): Promise<FirestoreTask[]> {
+  const ref = collection(db, 'meetings', meetingId, 'tasks');
+  const q = query(ref, orderBy('createdAt', 'asc'));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => toTask(d.id, meetingId, d.data()));
+}
+
+export async function updateTaskStatus(
+  meetingId: string,
+  taskId: string,
+  status: FirestoreTask['status'],
+): Promise<void> {
+  await updateDoc(doc(db, 'meetings', meetingId, 'tasks', taskId), {
+    status,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function deleteTask(meetingId: string, taskId: string): Promise<void> {
+  await deleteDoc(doc(db, 'meetings', meetingId, 'tasks', taskId));
+}
+
+export function onMeetingTasksChanged(
+  meetingId: string,
+  callback: (tasks: FirestoreTask[]) => void,
+) {
+  const ref = collection(db, 'meetings', meetingId, 'tasks');
+  const q = query(ref, orderBy('createdAt', 'asc'));
+  return onSnapshot(q, (snap) => {
+    callback(snap.docs.map((d) => toTask(d.id, meetingId, d.data())));
+  });
+}
+
+/** Get all tasks across all meetings for a given user (by assignee email) */
+export async function getUserTasks(userEmail: string): Promise<FirestoreTask[]> {
+  // First get all meetings the user organizes or participates in
+  const orgQuery = query(meetingsRef, where('organizerId', '==', userEmail));
+  const partQuery = query(meetingsRef, where('participants', 'array-contains', userEmail));
+
+  const [orgSnap, partSnap] = await Promise.all([getDocs(orgQuery), getDocs(partQuery)]);
+
+  const meetingIds = new Set<string>();
+  orgSnap.docs.forEach((d) => meetingIds.add(d.id));
+  partSnap.docs.forEach((d) => meetingIds.add(d.id));
+
+  // Fetch tasks from each meeting
+  const allTasks: FirestoreTask[] = [];
+  await Promise.all(
+    Array.from(meetingIds).map(async (mId) => {
+      const tasks = await getMeetingTasks(mId);
+      allTasks.push(...tasks);
+    }),
+  );
+
+  return allTasks.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+}
+
 // ─── Helpers ───
 
 function toDate(ts: Timestamp | null | undefined): Date {
@@ -185,6 +287,20 @@ function toMeeting(id: string, data: Record<string, unknown>): FirestoreMeeting 
     status: (data.status as FirestoreMeeting['status']) || 'planned',
     toolEnabled: (data.toolEnabled as boolean) ?? true,
     folderPath: data.folderPath as string | undefined,
+    createdAt: toDate(data.createdAt as Timestamp),
+    updatedAt: toDate(data.updatedAt as Timestamp),
+  };
+}
+
+function toTask(id: string, meetingId: string, data: Record<string, unknown>): FirestoreTask {
+  return {
+    id,
+    meetingId,
+    description: (data.description as string) || '',
+    assignee: data.assignee as string | undefined,
+    dueDate: data.dueDate as string | undefined,
+    status: (data.status as FirestoreTask['status']) || 'pending',
+    priority: data.priority as FirestoreTask['priority'],
     createdAt: toDate(data.createdAt as Timestamp),
     updatedAt: toDate(data.updatedAt as Timestamp),
   };

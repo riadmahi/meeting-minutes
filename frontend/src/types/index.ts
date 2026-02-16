@@ -108,3 +108,16 @@ export interface TranscriptSegmentData {
   text: string;
   confidence?: number;
 }
+
+// Task types for structured task extraction from meetings
+export interface MeetingTask {
+  id: string;
+  meetingId: string;
+  description: string;
+  assignee?: string;
+  dueDate?: string; // ISO date string
+  status: 'pending' | 'in_progress' | 'completed';
+  priority?: 'low' | 'medium' | 'high';
+  createdAt: Date;
+  updatedAt: Date;
+}
