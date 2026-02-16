@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronRight, File, Settings, ChevronLeftCircle, ChevronRightCircle, Calendar, StickyNote, Home, Trash2, Mic, Square, Plus, Search, Pencil, NotebookPen, SearchIcon, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, File, Settings, ChevronLeftCircle, ChevronRightCircle, Calendar, StickyNote, Home, Trash2, Mic, Square, Plus, Search, Pencil, NotebookPen, SearchIcon, X, User, LogOut } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useSidebar } from './SidebarProvider';
 import type { CurrentMeeting } from '@/components/Sidebar/SidebarProvider';
@@ -14,6 +14,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { useRecordingState } from '@/contexts/RecordingStateContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 import {
   Dialog,
@@ -57,6 +58,7 @@ const Sidebar: React.FC = () => {
 
   // Get recording state from RecordingStateContext (single source of truth)
   const { isRecording } = useRecordingState();
+  const { user, profile, signOut } = useAuth();
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['meetings']));
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [showModelSettings, setShowModelSettings] = useState(false);
@@ -779,6 +781,26 @@ const Sidebar: React.FC = () => {
               <Settings className="w-4 h-4 mr-2" />
               <span>Settings</span>
             </button>
+
+            {user && (
+              <div className="w-full flex items-center gap-1 mt-1 mb-1">
+                <button
+                  onClick={() => router.push('/profile')}
+                  className="flex-1 flex items-center justify-center px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <User className="w-4 h-4 mr-1" />
+                  <span className="truncate text-xs">{profile?.displayName || user.email}</span>
+                </button>
+                <button
+                  onClick={() => signOut()}
+                  className="p-1.5 text-gray-500 hover:text-red-500 hover:bg-gray-100 rounded-lg transition-colors"
+                  title="Se déconnecter"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
             <Info isCollapsed={isCollapsed} />
             <div className="w-full flex items-center justify-center px-3 py-1 text-xs text-gray-400">
               v0.2.1

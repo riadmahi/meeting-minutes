@@ -21,6 +21,8 @@ import { OnboardingFlow } from '@/components/onboarding'
 import { DownloadProgressToastProvider } from '@/components/shared/DownloadProgressToast'
 import { UpdateCheckProvider } from '@/components/UpdateCheckProvider'
 import { RecordingPostProcessingProvider } from '@/contexts/RecordingPostProcessingProvider'
+import { AuthProvider } from '@/contexts/AuthContext'
+import AuthGuard from '@/components/AuthGuard'
 
 const sourceSans3 = Source_Sans_3({
   subsets: ['latin'],
@@ -100,39 +102,43 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${sourceSans3.variable} font-sans antialiased`}>
-        <AnalyticsProvider>
-          <RecordingStateProvider>
-            <TranscriptProvider>
-              <ConfigProvider>
-                <OllamaDownloadProvider>
-                  <OnboardingProvider>
-                    <UpdateCheckProvider>
-                      <SidebarProvider>
-                        <TooltipProvider>
-                          <RecordingPostProcessingProvider>
-                            {/* Download progress toast provider - listens for background downloads */}
-                            <DownloadProgressToastProvider />
+        <AuthProvider>
+          <AnalyticsProvider>
+            <AuthGuard>
+              <RecordingStateProvider>
+                <TranscriptProvider>
+                  <ConfigProvider>
+                    <OllamaDownloadProvider>
+                      <OnboardingProvider>
+                        <UpdateCheckProvider>
+                          <SidebarProvider>
+                            <TooltipProvider>
+                              <RecordingPostProcessingProvider>
+                                {/* Download progress toast provider - listens for background downloads */}
+                                <DownloadProgressToastProvider />
 
-                            {/* Show onboarding or main app */}
-                            {showOnboarding ? (
-                              <OnboardingFlow onComplete={handleOnboardingComplete} />
-                            ) : (
-                              <div className="flex">
-                                <Sidebar />
-                                <MainContent>{children}</MainContent>
-                              </div>
-                            )}
-                          </RecordingPostProcessingProvider>
-                        </TooltipProvider>
-                      </SidebarProvider>
-                    </UpdateCheckProvider>
-                  </OnboardingProvider>
+                                {/* Show onboarding or main app */}
+                                {showOnboarding ? (
+                                  <OnboardingFlow onComplete={handleOnboardingComplete} />
+                                ) : (
+                                  <div className="flex">
+                                    <Sidebar />
+                                    <MainContent>{children}</MainContent>
+                                  </div>
+                                )}
+                              </RecordingPostProcessingProvider>
+                            </TooltipProvider>
+                          </SidebarProvider>
+                        </UpdateCheckProvider>
+                      </OnboardingProvider>
 
-                </OllamaDownloadProvider>
-              </ConfigProvider>
-            </TranscriptProvider>
-          </RecordingStateProvider>
-        </AnalyticsProvider>
+                    </OllamaDownloadProvider>
+                  </ConfigProvider>
+                </TranscriptProvider>
+              </RecordingStateProvider>
+            </AuthGuard>
+          </AnalyticsProvider>
+        </AuthProvider>
         <Toaster position="bottom-center" richColors closeButton />
       </body>
     </html>
