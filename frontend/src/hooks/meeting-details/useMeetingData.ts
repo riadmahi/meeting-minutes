@@ -4,6 +4,7 @@ import { BlockNoteSummaryViewRef } from '@/components/AISummary/BlockNoteSummary
 import { CurrentMeeting, useSidebar } from '@/components/Sidebar/SidebarProvider';
 import { invoke as invokeTauri } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
+import { updateMeetingTitle as firestoreUpdateTitle, saveSummary as firestoreSaveSummary } from '@/services/firestoreService';
 
 interface UseMeetingDataProps {
   meeting: any;
@@ -47,10 +48,16 @@ export function useMeetingData({ meeting, summaryData, onMeetingUpdated }: UseMe
 
   const handleSaveMeetingTitle = useCallback(async () => {
     try {
+      // Save to local SQLite
       await invokeTauri('api_save_meeting_title', {
         meetingId: meeting.id,
         title: meetingTitle,
       });
+
+      // Sync to Firestore (fire-and-forget, don't block on failure)
+      firestoreUpdateTitle(meeting.id, meetingTitle).catch((err) =>
+        console.warn('[useMeetingData] Firestore title sync failed:', err)
+      );
 
       console.log('Save meeting title success');
       setIsTitleDirty(false);
@@ -105,7 +112,12 @@ export function useMeetingData({ meeting, summaryData, onMeetingUpdated }: UseMe
         summary: formattedSummary,
       });
 
-      console.log('✅ Save meeting summary success');
+      // Sync to Firestore (fire-and-forget)
+      firestoreSaveSummary(meeting.id, JSON.stringify(formattedSummary)).catch((err) =>
+        console.warn('[useMeetingData] Firestore summary sync failed:', err)
+      );
+
+      console.log('Save meeting summary success');
     } catch (error) {
       console.error('❌ Failed to save meeting summary:', error);
       if (error instanceof Error) {
