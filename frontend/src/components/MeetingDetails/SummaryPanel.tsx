@@ -7,6 +7,7 @@ import { EmptyStateSummary } from '@/components/EmptyStateSummary';
 import { ModelConfig } from '@/components/ModelSettingsModal';
 import { SummaryGeneratorButtonGroup } from './SummaryGeneratorButtonGroup';
 import { SummaryUpdaterButtonGroup } from './SummaryUpdaterButtonGroup';
+import { MeetingTasksPanel } from '@/components/Tasks/MeetingTasksPanel';
 import Analytics from '@/lib/analytics';
 import { RefObject } from 'react';
 
@@ -262,6 +263,8 @@ export function SummaryPanel({
               }}
             />
           </div>
+          {/* Tasks panel */}
+          <MeetingTasksPanel meetingId={meeting.id} />
           {summaryStatus !== 'idle' && (
             <div className={`mt-4 p-4 rounded-lg ${summaryStatus === 'error' ? 'bg-red-100 text-red-700' :
               summaryStatus === 'completed' ? 'bg-green-100 text-green-700' :
