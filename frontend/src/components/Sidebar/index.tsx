@@ -574,7 +574,11 @@ const Sidebar: React.FC = () => {
               toggleFolder(item.id);
             } else {
               setCurrentMeeting({ id: item.id, title: item.title });
+              // Check if this is a planned meeting (Firestore) or a local meeting
+              const meetingEntry = meetings.find((m) => m.id === item.id);
+              const isPlanned = meetingEntry?.status === 'planned';
               const basePath = item.id.startsWith('intro-call') ? '/' :
+                isPlanned ? `/meetings/${item.id}` :
                 item.id.includes('-') ? `/meeting-details?id=${item.id}` : `/notes/${item.id}`;
               router.push(basePath);
             }
