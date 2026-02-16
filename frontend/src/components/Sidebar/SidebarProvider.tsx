@@ -5,6 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import Analytics from '@/lib/analytics';
 import { invoke } from '@tauri-apps/api/core';
 import { useRecordingState } from '@/contexts/RecordingStateContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { onUserMeetingsChanged } from '@/services/firestoreService';
 
 
 interface SidebarItem {
@@ -78,11 +80,30 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
 
   // Use recording state from RecordingStateContext (single source of truth)
   const { isRecording } = useRecordingState();
+  const { user } = useAuth();
 
   const pathname = usePathname();
   const router = useRouter();
 
-  // Extract fetchMeetings as a reusable function
+  // Firestore real-time meetings listener
+  const [firestoreMeetings, setFirestoreMeetings] = useState<CurrentMeeting[]>([]);
+
+  useEffect(() => {
+    if (!user) {
+      setFirestoreMeetings([]);
+      return;
+    }
+
+    const unsubscribe = onUserMeetingsChanged(user.uid, (meetings) => {
+      setFirestoreMeetings(meetings.map((m) => ({ id: m.id, title: m.title })));
+    });
+
+    return unsubscribe;
+  }, [user]);
+
+  // Extract fetchMeetings as a reusable function (local SQLite via Tauri)
+  const [localMeetings, setLocalMeetings] = useState<CurrentMeeting[]>([]);
+
   const fetchMeetings = React.useCallback(async () => {
     if (serverAddress) {
       try {
@@ -91,11 +112,11 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
           id: meeting.id,
           title: meeting.title
         }));
-        setMeetings(transformedMeetings);
+        setLocalMeetings(transformedMeetings);
         Analytics.trackBackendConnection(true);
       } catch (error) {
         console.error('Error fetching meetings:', error);
-        setMeetings([]);
+        setLocalMeetings([]);
         Analytics.trackBackendConnection(false, error instanceof Error ? error.message : 'Unknown error');
       }
     }
@@ -104,6 +125,14 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchMeetings();
   }, [serverAddress, fetchMeetings]);
+
+  // Merge local + Firestore meetings (deduplicate by id)
+  useEffect(() => {
+    const merged = new Map<string, CurrentMeeting>();
+    for (const m of localMeetings) merged.set(m.id, m);
+    for (const m of firestoreMeetings) merged.set(m.id, m);
+    setMeetings(Array.from(merged.values()));
+  }, [localMeetings, firestoreMeetings]);
 
   useEffect(() => {
     const fetchSettings = async () => {
