@@ -509,6 +509,20 @@ const Sidebar: React.FC = () => {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
+                onClick={() => router.push('/meetings/new')}
+                className="p-2 rounded-lg transition-colors duration-150 hover:bg-blue-50"
+              >
+                <Plus className="w-5 h-5 text-blue-500" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              <p>Nouvelle réunion</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
                 onClick={() => router.push('/settings')}
                 className={`p-2 rounded-lg transition-colors duration-150 ${isSettingsPage ? 'bg-gray-100' : 'hover:bg-gray-100'
                   }`}
@@ -756,6 +770,14 @@ const Sidebar: React.FC = () => {
         {!isCollapsed && (
 
           <div className="flex-shrink-0 p-2 border-t border-gray-100">
+            <button
+              onClick={() => router.push('/meetings/new')}
+              className="w-full flex items-center justify-center px-3 py-2 mb-1 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors shadow-sm"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              <span>Nouvelle réunion</span>
+            </button>
+
             <button
               onClick={handleRecordingToggle}
               disabled={isRecording}

@@ -19,6 +19,7 @@ interface SidebarItem {
 export interface CurrentMeeting {
   id: string;
   title: string;
+  status?: 'planned' | 'recording' | 'completed';
 }
 
 // Search result type for transcript search
@@ -95,7 +96,7 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     }
 
     const unsubscribe = onUserMeetingsChanged(user.uid, (meetings) => {
-      setFirestoreMeetings(meetings.map((m) => ({ id: m.id, title: m.title })));
+      setFirestoreMeetings(meetings.map((m) => ({ id: m.id, title: m.title, status: m.status })));
     });
 
     return unsubscribe;
@@ -142,13 +143,24 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     fetchSettings();
   }, []);
 
+  const plannedMeetings = meetings.filter((m) => m.status === 'planned');
+  const pastMeetings = meetings.filter((m) => m.status !== 'planned');
+
   const baseItems: SidebarItem[] = [
+    ...(plannedMeetings.length > 0
+      ? [{
+          id: 'planned',
+          title: 'Planned',
+          type: 'folder' as const,
+          children: plannedMeetings.map((m) => ({ id: m.id, title: m.title, type: 'file' as const })),
+        }]
+      : []),
     {
       id: 'meetings',
       title: 'Meeting Notes',
       type: 'folder' as const,
       children: [
-        ...meetings.map(meeting => ({ id: meeting.id, title: meeting.title, type: 'file' as const }))
+        ...pastMeetings.map(meeting => ({ id: meeting.id, title: meeting.title, type: 'file' as const }))
       ]
     },
   ];
