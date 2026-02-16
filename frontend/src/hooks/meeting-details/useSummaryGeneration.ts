@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import Analytics from '@/lib/analytics';
 import { isOllamaNotInstalledError } from '@/lib/utils';
 import { BuiltInModelInfo } from '@/lib/builtin-ai';
+import { addTasksBatch } from '@/services/firestoreService';
 
 type SummaryStatus = 'idle' | 'processing' | 'summarizing' | 'regenerating' | 'completed' | 'error';
 
@@ -232,6 +233,24 @@ export function useSummaryGeneration({
             console.log('Received markdown format from backend');
             setAiSummary({ markdown: pollingResult.data.markdown } as any);
             setSummaryStatus('completed');
+
+            // Save extracted tasks to Firestore if present
+            if (pollingResult.data.tasks && Array.isArray(pollingResult.data.tasks) && pollingResult.data.tasks.length > 0) {
+              console.log(`Saving ${pollingResult.data.tasks.length} extracted tasks to Firestore`);
+              try {
+                const tasksToSave = pollingResult.data.tasks.map((t: any) => ({
+                  description: t.description || '',
+                  assignee: t.assignee || undefined,
+                  dueDate: t.due_date || undefined,
+                  status: 'pending' as const,
+                  priority: t.priority || 'medium',
+                }));
+                await addTasksBatch(meeting.id, tasksToSave);
+                console.log('Tasks saved successfully');
+              } catch (err) {
+                console.warn('Failed to save extracted tasks:', err);
+              }
+            }
 
             // Show success toast
             toast.success('Summary generated successfully!', {

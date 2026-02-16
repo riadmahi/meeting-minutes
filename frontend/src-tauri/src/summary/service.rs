@@ -246,7 +246,7 @@ impl SummaryService {
         Self::cleanup_cancellation_token(&meeting_id);
 
         match result {
-            Ok((mut final_markdown, num_chunks)) => {
+            Ok((mut final_markdown, num_chunks, tasks_json)) => {
                 if num_chunks == 0 && final_markdown.is_empty() {
                     Self::update_process_failed(
                         &pool,
@@ -295,10 +295,13 @@ impl SummaryService {
                     }
                 }
 
-                // Create result JSON with markdown only (summary_json will be added on first edit)
-                let result_json = serde_json::json!({
+                // Create result JSON with markdown and extracted tasks
+                let mut result_json = serde_json::json!({
                     "markdown": final_markdown,
                 });
+                if let Some(tasks) = tasks_json {
+                    result_json["tasks"] = tasks;
+                }
 
                 // Update database with completed status
                 if let Err(e) = SummaryProcessesRepository::update_process_completed(
